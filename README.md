@@ -9,11 +9,11 @@ This repository contains code and scripts for training and validating TGVNs to r
 - **`m4raw_split`**: Contains the data split for the M4Raw dataset. Note that the csv files contain absolute paths, so the user should modify them depending on the dataset location.
 
 ### SLURM Batch Scripts
-- **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN.
-- **`K2.sbatch`**: SLURM script for running the experiment K2 using TGVN.
-- **`K3.sbatch`**: SLURM script for running the experiment K3 using TGVN.
-- **`B1.sbatch`**: SLURM script for running the experiment B1 using TGVN.
-- **`B2.sbatch`**: SLURM script for running the experiment B2 using TGVN.
+- **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN / E2E-VarNet.
+- **`K2.sbatch`**: SLURM script for running the experiment K2 using TGVN / E2E-VarNet.
+- **`K3.sbatch`**: SLURM script for running the experiment K3 using TGVN / E2E-VarNet.
+- **`B1.sbatch`**: SLURM script for running the experiment B1 using TGVN / E2E-VarNet.
+- **`B2.sbatch`**: SLURM script for running the experiment B2 using TGVN / E2E-VarNet.
 
 ### Core Code Files
 - **`custom_losses.py`**: Implements the custom loss function for training models.
