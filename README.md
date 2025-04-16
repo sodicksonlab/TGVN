@@ -5,7 +5,7 @@ This repository contains code and scripts for training and validating TGVNs to r
 Note that the M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS image as the ground truth, which required only minimal HDF5 file manipulation.
 For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images. The resulting file was saved as `file_T1.h5`.
 
-The overall acceleration factors differ from the undersampling factors due to repetition reduction. Specifically, for B1, $18\times$ undersampling combined with $2\times$ repetition reduction results in a $36\times$ practical acceleration. For B2, $15\times$ undersampling and $3\times$ repetition reduction yield a $45\times$ practical acceleration.
+In the brain experiments, the overall acceleration factors differ from the undersampling factors due to repetition reduction. Specifically, for B1, $18\times$ undersampling combined with $2\times$ repetition reduction results in a $36\times$ practical acceleration. For B2, $15\times$ undersampling and $3\times$ repetition reduction yield a $45\times$ practical acceleration.
 ## File Descriptions
 
 ### Data and Splits
