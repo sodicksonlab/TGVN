@@ -1,6 +1,7 @@
 # Project Repository
 
 This repository contains code and scripts for training and validating TGVNs to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. As the repository was built on fastMRI, the requirements can be found on https://github.com/facebookresearch/fastMRI
+
 Note that the M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS image as the ground truth, which required only minimal HDF5 file manipulation.
 For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images in the image domain. The resulting file was saved as `file_T1.h5`.
 ## File Descriptions
