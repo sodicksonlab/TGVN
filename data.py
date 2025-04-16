@@ -23,7 +23,6 @@ from typing import (
     Union,
 )
 
-
 # NamedTuple for a sample in Experiments K1, K2, and K3
 class VarNetSampleJoint(NamedTuple):
     pd_kspace: torch.Tensor
@@ -43,18 +42,30 @@ class VarNetSampleJoint(NamedTuple):
     pd_crop_size: Tuple[int, int]
     pdfs_crop_size: Tuple[int, int]
 
-# NamedTuple for a sample in Experiments B1
-class VarNetSampleM4(NamedTuple):
+
+# NamedTuple for a sample in Experiments B1 and B2
+class VarNetSampleM4Joint(NamedTuple):
     flair_kspace: torch.Tensor
     flair_mask: torch.Tensor
     flair_num_low_frequencies: Optional[int]
     flair_target: torch.Tensor
+    t1_kspace: torch.Tensor
+    t1_mask: torch.Tensor
+    t1_num_low_frequencies: Optional[int]
+    t1_target: torch.Tensor
     t2_kspace: torch.Tensor
+    t2_mask: torch.Tensor
+    t2_num_low_frequencies: Optional[int]
+    t2_target: torch.Tensor
     flair_fname: str
+    t1_fname: str
     t2_fname: str
     flair_slice_num: int
+    t1_slice_num: int
     t2_slice_num: int
     flair_max_value: float
+    t1_max_value: float
+    t2_max_value: float
 
 
 class SliceDatasetJoint(torch.utils.data.Dataset):
@@ -184,10 +195,10 @@ class SliceDatasetJoint(torch.utils.data.Dataset):
         return sample
 
 
-class SliceDatasetM4(torch.utils.data.Dataset):
+class SliceDatasetM4Joint(torch.utils.data.Dataset):
     """
-    A PyTorch Dataset that provides access to matching FLAIR-T2w
-    MR image slices from the M4Raw brain dataset (B1).
+    A PyTorch Dataset that provides access to matching FLAIR-T1w-T2w
+    MR image slices from the M4Raw brain dataset (B1 and B2).
     """
 
     def __init__(
@@ -219,6 +230,7 @@ class SliceDatasetM4(torch.utils.data.Dataset):
         prefix = [Path(csv.values[:, 0][ind]) for ind in range(len(csv))]
 
         self.flair_raw_samples = []
+        self.t1_raw_samples = []
         self.t2_raw_samples = []
         for fname in prefix:
             fname = Path(str(fname) + '_FLAIR.h5')
@@ -228,9 +240,18 @@ class SliceDatasetM4(torch.utils.data.Dataset):
                 raw_sample = FastMRIRawDataSample(fname, slice_ind, metadata)
                 new_raw_samples.append(raw_sample)
             self.flair_raw_samples += new_raw_samples
-            
+
         for fname in prefix:
-            fname = Path(str(fname) + '_T201.h5')
+            fname = Path(str(fname) + '_T1.h5')
+            metadata, num_slices = self._retrieve_metadata(fname)
+            new_raw_samples = []
+            for slice_ind in range(num_slices):
+                raw_sample = FastMRIRawDataSample(fname, slice_ind, metadata)
+                new_raw_samples.append(raw_sample)
+            self.t1_raw_samples += new_raw_samples
+
+        for fname in prefix:
+            fname = Path(str(fname) + '_T2.h5')
             metadata, num_slices = self._retrieve_metadata(fname)
             new_raw_samples = []
             for slice_ind in range(num_slices):
@@ -279,6 +300,7 @@ class SliceDatasetM4(torch.utils.data.Dataset):
 
     def __getitem__(self, i: int):
         flair_fname, flair_dataslice, flair_metadata = self.flair_raw_samples[i]
+        t1_fname, t1_dataslice, t1_metadata = self.t1_raw_samples[i]
         t2_fname, t2_dataslice, t2_metadata = self.t2_raw_samples[i]
         
         with h5py.File(flair_fname, "r") as hf:
@@ -289,28 +311,40 @@ class SliceDatasetM4(torch.utils.data.Dataset):
             flair_attrs = dict(hf.attrs)
             flair_attrs.update(flair_metadata)
 
+        with h5py.File(t1_fname, "r") as hf:
+            t1_kspace = hf["kspace"][t1_dataslice]
+            t1_mask = np.asarray(hf["mask"]) if "mask" in hf else None
+            t1_target = hf[self.recons_key][t1_dataslice] if self.recons_key in hf else None
+
+            t1_attrs = dict(hf.attrs)
+            t1_attrs.update(t1_metadata)
+
         with h5py.File(t2_fname, "r") as hf:
             t2_kspace = hf["kspace"][t2_dataslice]
+            t2_mask = np.asarray(hf["mask"]) if "mask" in hf else None
+            t2_target = hf[self.recons_key][t2_dataslice] if self.recons_key in hf else None
 
             t2_attrs = dict(hf.attrs)
-            t2_attrs.update(t2_metadata)        
+            t2_attrs.update(t2_metadata) 
             
         if self.transform is None:
             sample = (
-                flair_kspace, flair_mask, flair_target, flair_fname.name, flair_dataslice,
-                 flair_attrs, t2_kspace, t2_fname.name, t2_dataslice, t2_attrs
+                flair_kspace, flair_mask, flair_target, flair_fname.name,
+                flair_dataslice, flair_attrs, t1_kspace, t1_mask,
+                t1_target, t1_fname.name, t1_dataslice, t1_attrs,
+                t2_kspace, t2_mask, t2_target, t2_fname.name, t2_dataslice, t2_attrs
             )
-            
         else:
             sample = self.transform(
-                flair_kspace, flair_mask, flair_target, flair_fname.name, flair_dataslice,
-                flair_attrs, t2_kspace, t2_fname.name, t2_dataslice, t2_attrs
+                flair_kspace, flair_mask, flair_target, flair_fname.name,
+                flair_dataslice, flair_attrs, t1_kspace, t1_mask,
+                t1_target, t1_fname.name, t1_dataslice, t1_attrs,
+                t2_kspace, t2_mask, t2_target, t2_fname.name, t2_dataslice, t2_attrs
             )
-
         return sample
 
 
-class VarNetDataTransformM4:
+class VarNetDataTransformM4Joint:
     """
     Data Transformer for training VN-TGVN models for the M4Raw dataset.
     """
@@ -318,6 +352,8 @@ class VarNetDataTransformM4:
     def __init__(
         self,
         flair_mask_func: Optional[MaskFunc] = None,
+        t1_mask_func: Optional[MaskFunc] = None,
+        t2_mask_func: Optional[MaskFunc] = None,
         use_seed: bool = True
     ):
         """
@@ -329,6 +365,8 @@ class VarNetDataTransformM4:
                 mask is used for all the slices of a given volume every time.
         """
         self.flair_mask_func = flair_mask_func
+        self.t1_mask_func = t1_mask_func
+        self.t2_mask_func = t2_mask_func
         self.use_seed = use_seed
 
     def __call__(
@@ -337,45 +375,94 @@ class VarNetDataTransformM4:
         flair_mask: np.ndarray,
         flair_target: Optional[np.ndarray],
         flair_fname: str,
-        flair_slice_num: int, 
-        flair_attrs: Dict, 
+        flair_slice_num: int,
+        flair_attrs: Dict,
+        t1_kspace: np.ndarray,
+        t1_mask: np.ndarray,
+        t1_target: Optional[np.ndarray],
+        t1_fname: str,
+        t1_slice_num: int,
+        t1_attrs: Dict,
         t2_kspace: np.ndarray,
+        t2_mask: np.ndarray,
+        t2_target: Optional[np.ndarray],
         t2_fname: str,
         t2_slice_num: int,
         t2_attrs: Dict,
-    ) -> VarNetSampleM4:
+    ) -> VarNetSampleM4Joint:
         
         if flair_target is not None:
             flair_target_torch = to_tensor(flair_target)
-            flair_max_value = flair_attrs["max"]        
+            flair_max_value = flair_attrs["max"]
         else:
             flair_target_torch = torch.tensor(0)
             flair_max_value = 0.0
 
+        if t1_target is not None:
+            t1_target_torch = to_tensor(t1_target)
+            t1_max_value = t1_attrs["max"]
+        else:
+            t1_target_torch = torch.tensor(0)
+            t1_max_value = 0.0
+
+        if t2_target is not None:
+            t2_target_torch = to_tensor(t2_target)
+            t2_max_value = t2_attrs["max"]
+        else:
+            t2_target_torch = torch.tensor(0)
+            t2_max_value = 0.0
+
         flair_kspace_torch = to_tensor(flair_kspace)
+        t1_kspace_torch = to_tensor(t1_kspace)
         t2_kspace_torch = to_tensor(t2_kspace)
 
         seed = None if not self.use_seed else tuple(map(ord, flair_fname))
         flair_acq_start = flair_attrs["padding_left"]
         flair_acq_end = flair_attrs["padding_right"]
-        
+
+        t1_acq_start = t1_attrs["padding_left"]
+        t1_acq_end = t1_attrs["padding_right"]
+
+        t2_acq_start = t2_attrs["padding_left"]
+        t2_acq_end = t2_attrs["padding_right"]
+
         flair_masked_kspace, flair_mask_torch, flair_num_low_frequencies = apply_mask(
             flair_kspace_torch, self.flair_mask_func, seed=seed, padding=(flair_acq_start, flair_acq_end)
         )
+
+        t1_masked_kspace, t1_mask_torch, t1_num_low_frequencies = apply_mask(
+            t1_kspace_torch, self.t1_mask_func, seed=seed, padding=(t1_acq_start, t1_acq_end)
+        )
+
+        t2_masked_kspace, t2_mask_torch, t2_num_low_frequencies = apply_mask(
+            t2_kspace_torch, self.t2_mask_func, seed=seed, padding=(t2_acq_start, t2_acq_end)
+        )
         
-        sample = VarNetSampleM4(
+        sample = VarNetSampleM4Joint(
             flair_kspace=flair_masked_kspace,
             flair_mask=flair_mask_torch.to(torch.bool),
             flair_num_low_frequencies=flair_num_low_frequencies,
             flair_target=flair_target_torch,
-            t2_kspace=t2_kspace_torch,
+            t1_kspace=t1_masked_kspace,
+            t1_mask=t1_mask_torch.to(torch.bool),
+            t1_num_low_frequencies=t1_num_low_frequencies,
+            t1_target=t1_target_torch,
+            t2_kspace=t2_masked_kspace,
+            t2_mask=t2_mask_torch.to(torch.bool),
+            t2_num_low_frequencies=t2_num_low_frequencies,
+            t2_target=t2_target_torch,
             flair_fname=flair_fname,
+            t1_fname=t1_fname,
             t2_fname=t2_fname,
             flair_slice_num=flair_slice_num,
+            t1_slice_num=t1_slice_num,
             t2_slice_num=t2_slice_num,
             flair_max_value=flair_max_value,
+            t1_max_value=t1_max_value,
+            t2_max_value=t2_max_value
         )
         return sample
+
 
 class VarNetDataTransformJoint:
     """
