@@ -24,7 +24,7 @@ from typing import (
 )
 
 
-# NamedTuple for a sample in Experiments I and II 
+# NamedTuple for a sample in Experiments K1, K2, and K3
 class VarNetSampleJoint(NamedTuple):
     pd_kspace: torch.Tensor
     pd_mask: torch.Tensor
@@ -43,7 +43,7 @@ class VarNetSampleJoint(NamedTuple):
     pd_crop_size: Tuple[int, int]
     pdfs_crop_size: Tuple[int, int]
 
-# NamedTuple for a sample in Experiments III
+# NamedTuple for a sample in Experiments B1
 class VarNetSampleM4(NamedTuple):
     flair_kspace: torch.Tensor
     flair_mask: torch.Tensor
@@ -60,7 +60,7 @@ class VarNetSampleM4(NamedTuple):
 class SliceDatasetJoint(torch.utils.data.Dataset):
     """
     A PyTorch Dataset that provides access to matching PDw-PDFSw
-    MR image slices from the fastMRI knee dataset (Experiment I and II).
+    MR image slices from the fastMRI knee dataset (K1, K2, and K3).
     """
 
     def __init__(
@@ -187,7 +187,7 @@ class SliceDatasetJoint(torch.utils.data.Dataset):
 class SliceDatasetM4(torch.utils.data.Dataset):
     """
     A PyTorch Dataset that provides access to matching FLAIR-T2w
-    MR image slices from the M4Raw brain dataset (Experiment III).
+    MR image slices from the M4Raw brain dataset (B1).
     """
 
     def __init__(
