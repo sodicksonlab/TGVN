@@ -5,7 +5,7 @@ from distributed import init_distributed_mode
 from torch import optim, nn
 from fastmri.data.subsample import RandomMaskFunc, EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
-from data import VarNetDataTransformM4, SliceDatasetM4
+from data import VarNetDataTransformM4Joint, SliceDatasetM4Joint
 from models import VarNetImage, VarNetImageSDC_2S
 from custom_losses import MS_SSIM_L1Loss
 from fastmri import SSIMLoss
@@ -30,7 +30,8 @@ def get_arguments():
     
     # Type and checkpoint location
     parser.add_argument("--ckpt-loc", type=str, default='none')
-    parser.add_argument("--type", type=str, default='std' )
+    parser.add_argument("--type", type=str, default='std')
+    parser.add_argument("--main-contrast", type=str, default='flair')
 
     return parser
 if __name__ == "__main__":
@@ -47,12 +48,22 @@ if __name__ == "__main__":
     per_device_batch_size = 1 # collation can be a problem if > 1
     
     train_path = './m4raw_split/train.csv'
-    train_transform = VarNetDataTransformM4(
-        flair_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
-        use_seed=False
-    )
+    if args.main_contrast.lower() == 'flair':
+        train_transform = VarNetDataTransformM4Joint(
+            flair_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
+            t1_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            t2_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            use_seed=False
+        )
+    else:
+        train_transform = VarNetDataTransformM4Joint(
+            flair_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            t1_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
+            t2_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            use_seed=False
+        )        
     
-    train_dataset = SliceDatasetM4(
+    train_dataset = SliceDatasetM4Joint(
         csv_path=train_path,
         transform=train_transform,
         challenge=challenge
@@ -67,11 +78,22 @@ if __name__ == "__main__":
     )
 
     val_path = './m4raw_split/val.csv'
-    val_transform = VarNetDataTransformM4(
-        flair_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
-        use_seed=True
-    )
-    val_dataset = SliceDatasetM4(
+    if args.main_contrast.lower() == 'flair':
+        val_transform = VarNetDataTransformM4Joint(
+            flair_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
+            t1_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            t2_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            use_seed=True
+        )
+    else:
+        val_transform = VarNetDataTransformM4Joint(
+            flair_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            t1_mask_func=EquiSpacedMaskFunc(center_fractions=[args.center_freq], accelerations=[args.acc]),
+            t2_mask_func=EquiSpacedMaskFunc(center_fractions=[0], accelerations=[1]),
+            use_seed=True
+        )
+        
+    val_dataset = SliceDatasetM4Joint(
         csv_path=val_path,
         transform=val_transform,
         challenge=challenge
@@ -86,15 +108,14 @@ if __name__ == "__main__":
     )    
     
     if args.type.lower() == 'std':
-        print('————Standard VarNet, no secondary data consistency————')
+        print('————Standard VarNet, no ambiguous space consistency————')
         model = VarNetImage(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
     elif args.type.lower() == 'sdc':
-        print('————Secondary data consistency————')
+        print('————Ambiguous space consistency————')
         model = VarNetImageSDC_2S(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
     else:
         raise NotImplementedError('There is no such type, check the arguments!')
         
-    model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     
     if args.ckpt_loc.lower() != 'none':
@@ -127,20 +148,36 @@ if __name__ == "__main__":
         val_loss = 0
         val_ssim = 0
         for step, batch in enumerate(train_loader, start=epoch*len(train_loader)):
-            t2_kspace = batch.t2_kspace.cuda(gpu, non_blocking=True)
-            flair_masked_kspace = batch.flair_kspace.cuda(gpu, non_blocking=True)
+            t2_kspace = batch.t2_kspace.cuda(gpu, non_blocking=True)  # Side information
+            flair_kspace = batch.flair_kspace.cuda(gpu, non_blocking=True)
             flair_mask = batch.flair_mask.cuda(gpu, non_blocking=True)
             flair_target = batch.flair_target.cuda(gpu, non_blocking=True)
             flair_mx = batch.flair_max_value.cuda(gpu, non_blocking=True)
+            t1_kspace = batch.t1_kspace.cuda(gpu, non_blocking=True)
+            t1_mask = batch.t1_mask.cuda(gpu, non_blocking=True)
+            t1_target = batch.t1_target.cuda(gpu, non_blocking=True)
+            t1_mx = batch.t1_max_value.cuda(gpu, non_blocking=True)
             optimizer.zero_grad()
             
             # At this point out is of size BxHxW (magnitude-image)
             if args.type.lower() == 'std':
-                out = model(flair_masked_kspace, flair_mask)
+                if args.main_contrast.lower() == 'flair':
+                    out = model(flair_kspace, flair_mask)
+                else:
+                    out = model(t1_kspace, t1_mask)
             else:
-                out = model(flair_masked_kspace, flair_mask, t2_kspace)
-            target, out = center_crop_to_smallest(flair_target.unsqueeze(1), out)
-            l = loss(out, target, data_range=flair_mx.item())
+                if args.main_contrast.lower() == 'flair':
+                    out = model(flair_kspace, flair_mask, t2_kspace)
+                else:
+                    out = model(t1_kspace, t1_mask, t2_kspace)
+                    
+            if args.main_contrast.lower() == 'flair':
+                target, out = center_crop_to_smallest(flair_target.unsqueeze(1), out)
+                l = loss(out, target, data_range=flair_mx.item())
+            else:
+                target, out = center_crop_to_smallest(t1_target.unsqueeze(1), out)
+                l = loss(out, target, data_range=t1_mx.item())
+                
             l.backward()
             optimizer.step()
             train_loss += l.item()
@@ -154,26 +191,42 @@ if __name__ == "__main__":
                 model=model.state_dict(),
                 optimizer=optimizer.state_dict(),
             )
-            torch.save(state, f'./TGVN_{args.acc}x_{args.type}_{epoch}.pth')
+            torch.save(state, f'./TGVN_{args.acc}x_{args.main_contrast}_{args.type}_{epoch}.pth')
         
         with torch.no_grad():
             model.eval()
             val_sampler.set_epoch(epoch)
             for step, batch in enumerate(val_loader, start=epoch*len(val_loader)):
                 t2_kspace = batch.t2_kspace.cuda(gpu, non_blocking=True)
-                flair_masked_kspace = batch.flair_kspace.cuda(gpu, non_blocking=True)
+                flair_kspace = batch.flair_kspace.cuda(gpu, non_blocking=True)
                 flair_mask = batch.flair_mask.cuda(gpu, non_blocking=True)
                 flair_target = batch.flair_target.cuda(gpu, non_blocking=True)
                 flair_mx = batch.flair_max_value.cuda(gpu, non_blocking=True)
+                t1_kspace = batch.t1_kspace.cuda(gpu, non_blocking=True)
+                t1_mask = batch.t1_mask.cuda(gpu, non_blocking=True)
+                t1_target = batch.t1_target.cuda(gpu, non_blocking=True)
+                t1_mx = batch.t1_max_value.cuda(gpu, non_blocking=True)
                 
-                if args.type.lower() == 'std':           
-                    out = model(flair_masked_kspace, flair_mask)
+                if args.type.lower() == 'std':
+                    if args.main_contrast.lower() == 'flair':
+                        out = model(flair_kspace, flair_mask)
+                    else:
+                        out = model(t1_kspace, t1_mask)
                 else:
-                    out = model(flair_masked_kspace, flair_mask, t2_kspace)
+                    if args.main_contrast.lower() == 'flair':
+                        out = model(flair_kspace, flair_mask, t2_kspace)
+                    else:
+                        out = model(t1_kspace, t1_mask, t2_kspace)
                     
-                target, out = center_crop_to_smallest(flair_target.unsqueeze(1), out)
-                s = 1 - ssim_loss(out, target, data_range=flair_mx) 
-                l = loss(out, target, data_range=flair_mx.item())
+                if args.main_contrast.lower() == 'flair':
+                    target, out = center_crop_to_smallest(flair_target.unsqueeze(1), out)
+                    l = loss(out, target, data_range=flair_mx.item())
+                    s = 1 - ssim_loss(out, target, data_range=flair_mx) 
+                else:
+                    target, out = center_crop_to_smallest(t1_target.unsqueeze(1), out)
+                    l = loss(out, target, data_range=t1_mx.item())
+                    s = 1 - ssim_loss(out, target, data_range=t1_mx) 
+                    
                 val_loss += l.item()
                 val_ssim += s.item()
 
