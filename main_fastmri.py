@@ -6,12 +6,12 @@ from torch import optim, nn
 from fastmri.data.subsample import RandomMaskFunc, EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
 from data import VarNetDataTransformJoint, SliceDatasetJoint
-from models import VarNetImage, VarNetImageSDC
+from models import VarNetImage, TGVN
 from custom_losses import MS_SSIM_L1Loss
 from fastmri import SSIMLoss
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description="Multi-coil VarNet", add_help=False)
+    parser = argparse.ArgumentParser(description="TGVN", add_help=False)
 
     # Distributed
     parser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
@@ -33,11 +33,11 @@ def get_arguments():
     
     # Type and checkpoint location
     parser.add_argument("--ckpt-loc", type=str, default='none')
-    parser.add_argument("--type", type=str, default='std' )
+    parser.add_argument("--type", type=str, default='e2e' )
 
     return parser
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser('Multi-coil VarNet', parents=[get_arguments()])
+    parser = argparse.ArgumentParser('TGVN', parents=[get_arguments()])
     args = parser.parse_args()
     torch.backends.cudnn.benchmark=True
     init_distributed_mode(args)
@@ -90,16 +90,15 @@ if __name__ == "__main__":
         num_workers=batch_size,
     )    
     
-    if args.type.lower() == 'std':
-        print('————Standard VarNet, no secondary data consistency————')
+    if args.type.lower() == 'e2e':
+        print('————End-to-end Variational Network, no side information————')
         model = VarNetImage(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
-    elif args.type.lower() == 'sdc':
-        print('————Secondary data consistency————')
-        model = VarNetImageSDC(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
+    elif args.type.lower() == 'tgvn':
+        print('————Trust-guided Variational Network————')
+        model = TGVN(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
     else:
         raise NotImplementedError('There is no such type, check the arguments!')
         
-    model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     
     if args.ckpt_loc.lower() != 'none':
@@ -140,7 +139,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             
             # At this point out is of size BxHxW (magnitude-image)
-            if args.type.lower() == 'std':
+            if args.type.lower() == 'e2e':
                 out = model(s_masked_kspace, s_mask)
             else:
                 out = model(s_masked_kspace, s_mask, p_masked_kspace)
@@ -159,7 +158,7 @@ if __name__ == "__main__":
                 optimizer=optimizer.state_dict(),
             )
             # Modify the path as appropriate 
-            torch.save(state, f'./TGVN_{args.acc_s}x_{args.acc_p}x_{args.type}_{epoch}.pth')
+            torch.save(state, f'./model_{args.type}_{args.acc_s}x_{args.acc_p}x_{epoch}.pth')
         
         with torch.no_grad():
             model.eval()
@@ -171,7 +170,7 @@ if __name__ == "__main__":
                 s_target = batch.pdfs_target.cuda(gpu, non_blocking=True)
                 s_mx = batch.pdfs_max_value.cuda(gpu, non_blocking=True)
                 
-                if args.type.lower() == 'std':
+                if args.type.lower() == 'e2e':
                     out = model(s_masked_kspace, s_mask)
                 else:
                     out = model(s_masked_kspace, s_mask, p_masked_kspace)
