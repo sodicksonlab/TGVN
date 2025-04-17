@@ -606,4 +606,4 @@ class TGVN_2S(nn.Module):
         if return_mag:
             return complex_abs(image_pred)
         else:
-            return torch.view_as_complex(image_pred)        
+            return torch.view_as_complex(image_pred)
