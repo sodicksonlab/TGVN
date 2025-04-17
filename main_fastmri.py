@@ -11,7 +11,7 @@ from custom_losses import MS_SSIM_L1Loss
 from fastmri import SSIMLoss
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description="TGVN", add_help=False)
+    parser = argparse.ArgumentParser(description="Side Information Experiments", add_help=False)
 
     # Distributed
     parser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
@@ -37,7 +37,7 @@ def get_arguments():
 
     return parser
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser('TGVN', parents=[get_arguments()])
+    parser = argparse.ArgumentParser('Side Information Experiments', parents=[get_arguments()])
     args = parser.parse_args()
     torch.backends.cudnn.benchmark=True
     init_distributed_mode(args)
