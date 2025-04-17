@@ -59,5 +59,4 @@ class MS_SSIM_L1Loss(nn.Module):
 
         loss_mix = self.alpha * loss_ms_ssim + (1 - self.alpha) * gaussian_l1 / data_range
         loss_mix = self.compensation * loss_mix
-
         return loss_mix.mean()
