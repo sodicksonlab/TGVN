@@ -6,7 +6,7 @@ from torch import optim, nn
 from fastmri.data.subsample import RandomMaskFunc, EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
 from data import VarNetDataTransformJoint, SliceDatasetJoint
-from models import VarNetImage, TGVN
+from models import VarNetImage, TGVN_1S
 from custom_losses import MS_SSIM_L1Loss
 from fastmri import SSIMLoss
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         model = VarNetImage(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
     elif args.type.lower() == 'tgvn':
         print('————Trust-guided Variational Network————')
-        model = TGVN(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
+        model = TGVN_1S(num_cascades=args.num_casc, chans=args.num_chans).to(gpu)
     else:
         raise NotImplementedError('There is no such type, check the arguments!')
         
