@@ -10,6 +10,11 @@ from fastmri import complex_abs, complex_conj, ifft2c, fft2c, rss_complex
 from fastmri.data.transforms import center_crop, batched_mask_center
 from fastmri.models.unet import Unet
 
+def sens_expand(x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+    return fft2c(complex_mul(x, sens_maps))
+
+def sens_reduce(k: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+    return complex_mul(ifft2c(k), complex_conj(sens_maps)).sum(dim=1, keepdim=True)
 
 def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
@@ -35,7 +40,23 @@ def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     im = x_re * y_im + x_im * y_re
     return torch.stack((re, im), dim=-1)
     
-
+def inner(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Args:
+        a, b are B x 1 x H x W x 2 tensors
+        where the last dimension represents 
+        the real and imaginary parts 
+    """
+    B, C, H, W, two = a.shape
+    assert (two == 2) and (a.shape == b.shape)
+    a = a.view(B, C, H * W, 2)
+    b = b.view(B, C, H * W, 2)
+    re_a, im_a = a[..., 0].clone(), a[..., 1].clone()
+    re_b, im_b = b[..., 0].clone(), b[..., 1].clone()
+    out = re_a * re_b + im_a * im_b
+    out = out.sum(dim=2, keepdim=True).unsqueeze(2)
+    return out
+    
 class NormUnet(nn.Module):
     """
     Normalized U-Net model.
@@ -118,7 +139,6 @@ class NormUnet(nn.Module):
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py#L3457
         # https://github.com/pytorch/pytorch/pull/16949
         x = F.pad(x, w_pad + h_pad)
-
         return x, (h_pad, w_pad, h_mult, w_mult)
 
     def unpad(
@@ -146,7 +166,6 @@ class NormUnet(nn.Module):
         x = self.unpad(x, *pad_sizes)
         x = self.unnorm(x, mean, L)
         x = self.chan_complex_to_last_dim(x)
-
         return x
 
 class SensitivityModel(nn.Module):
@@ -260,14 +279,6 @@ class VarNetBlockImage(nn.Module):
         self.model = model
         self.dc_weight = nn.Parameter(torch.ones(1))
         
-    def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return fft2c(complex_mul(x, sens_maps))
-
-    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return complex_mul(
-            ifft2c(x), complex_conj(sens_maps)
-        ).sum(dim=1, keepdim=True)
-        
     def forward(
         self,
         current_image: torch.Tensor,
@@ -276,11 +287,11 @@ class VarNetBlockImage(nn.Module):
         sens_maps: torch.Tensor,
     ) -> torch.Tensor:
         
-        current_kspace = self.sens_expand(current_image, sens_maps) 
+        current_kspace = sens_expand(current_image, sens_maps) 
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
         soft_dc = torch.where(mask, current_kspace - ref_kspace, zero)
         soft_dc *= torch.abs(self.dc_weight)
-        soft_dc = self.sens_reduce(soft_dc, sens_maps)
+        soft_dc = sens_reduce(soft_dc, sens_maps)
         model_term = self.model(current_image)
         return current_image - soft_dc  - model_term
 
@@ -304,31 +315,6 @@ class TGVN_Block(nn.Module):
         self.dc_weight = nn.Parameter(torch.ones(1))
         self.asc_weight = nn.Parameter(torch.ones(1))
         
-    def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return fft2c(complex_mul(x, sens_maps))
-
-    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return complex_mul(
-            ifft2c(x), complex_conj(sens_maps)
-        ).sum(dim=1, keepdim=True)
-
-    def inner(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            a, b are B x 1 x H x W x 2 tensors
-            where the last dimension represents 
-            the real and imaginary parts 
-        """
-        B, C, H, W, two = a.shape
-        assert (two == 2) and (a.shape == b.shape)
-        a = a.view(B, C, H * W, 2)
-        b = b.view(B, C, H * W, 2)
-        re_a, im_a = a[..., 0].clone(), a[..., 1].clone()
-        re_b, im_b = b[..., 0].clone(), b[..., 1].clone()
-        out = re_a * re_b + im_a * im_b
-        out = out.sum(dim=2, keepdim=True).unsqueeze(2)
-        return out 
-        
     def forward(
         self,
         current_image: torch.Tensor,
@@ -341,23 +327,23 @@ class TGVN_Block(nn.Module):
         num_iter: int = 10,
     ) -> torch.Tensor:
         
-        current_kspace = self.sens_expand(current_image, sens_maps) 
+        current_kspace = sens_expand(current_image, sens_maps) 
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
         soft_dc = torch.where(mask, current_kspace - ref_kspace, zero)
         soft_dc *= torch.abs(self.dc_weight)
-        soft_dc = self.sens_reduce(soft_dc, sens_maps)
+        soft_dc = sens_reduce(soft_dc, sens_maps)
         model_term = self.model(current_image)
 
         if sens_maps_second is not None: 
             b = current_image - self.asc_model(
-                self.sens_reduce(
+                sens_reduce(
                     second_kspace, 
                     sens_maps_second
                 )
             )
         else:
             b = current_image - self.asc_model(
-                self.sens_reduce(
+                sens_reduce(
                     second_kspace, 
                     sens_maps
                 )
@@ -367,29 +353,29 @@ class TGVN_Block(nn.Module):
         # where b is given above 
         mask_delta = 1 + mask / delta ** 2
         mask_delta_inv = 1 / mask_delta
-        x = self.sens_reduce(
-            mask_delta_inv * self.sens_expand(
+        x = sens_reduce(
+            mask_delta_inv * sens_expand(
                 b, sens_maps
             ), sens_maps
         )
-        r = b - self.sens_reduce(
-            mask_delta * self.sens_expand(
+        r = b - sens_reduce(
+            mask_delta * sens_expand(
                 x, sens_maps
             ), sens_maps
         )
         p = r.clone()
-        rs_old = self.inner(r, r)
+        rs_old = inner(r, r)
     
         for _ in range(num_iter):
-            Ap = self.sens_reduce(
-                mask_delta * self.sens_expand(
+            Ap = sens_reduce(
+                mask_delta * sens_expand(
                     p, sens_maps
                 ), sens_maps
             )
-            alpha = rs_old / self.inner(p, Ap)
+            alpha = rs_old / inner(p, Ap)
             x += alpha * p
             r -= alpha * Ap 
-            rs_new = self.inner(r, r)
+            rs_new = inner(r, r)
             p = r + rs_new / rs_old * p
             rs_old = rs_new
         
@@ -436,12 +422,7 @@ class VarNetImage(nn.Module):
         self.cascades = nn.ModuleList(
             [VarNetBlockImage(NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
-        
-    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return complex_mul(
-            ifft2c(x), complex_conj(sens_maps)
-        ).sum(dim=1, keepdim=True)
-        
+
     def forward(
         self,
         masked_kspace: torch.Tensor,
@@ -451,7 +432,7 @@ class VarNetImage(nn.Module):
     ) -> torch.Tensor:
 
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
-        image_pred = self.sens_reduce(masked_kspace, sens_maps)
+        image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
             image_pred = cascade(
@@ -503,11 +484,6 @@ class TGVN_1S(nn.Module):
             [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
         
-    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return complex_mul(
-            ifft2c(x), complex_conj(sens_maps)
-        ).sum(dim=1, keepdim=True)
-        
     def forward(
         self,
         masked_kspace: torch.Tensor,
@@ -518,7 +494,7 @@ class TGVN_1S(nn.Module):
     ) -> torch.Tensor:
 
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
-        image_pred = self.sens_reduce(masked_kspace, sens_maps)
+        image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
             image_pred = cascade(
@@ -573,11 +549,6 @@ class TGVN_2S(nn.Module):
             [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
         )            
         
-    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return complex_mul(
-            ifft2c(x), complex_conj(sens_maps)
-        ).sum(dim=1, keepdim=True)
-        
     def forward(
         self,
         masked_kspace: torch.Tensor,
@@ -589,7 +560,7 @@ class TGVN_2S(nn.Module):
 
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
         sens_maps_second = self.sens_net(second_kspace, mask, num_low_frequencies)
-        image_pred = self.sens_reduce(masked_kspace, sens_maps)
+        image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
             image_pred = cascade(
