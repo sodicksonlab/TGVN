@@ -466,7 +466,7 @@ class VarNetImage(nn.Module):
         else:
             return torch.view_as_complex(image_pred) 
 
-class TGVN(nn.Module):
+class TGVN_1S(nn.Module):
     """
     A full TGVN model.
     """
