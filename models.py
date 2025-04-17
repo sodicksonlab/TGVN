@@ -284,25 +284,25 @@ class VarNetBlockImage(nn.Module):
         model_term = self.model(current_image)
         return current_image - soft_dc  - model_term
 
-class VarNetBlockImage_SDC(nn.Module):
+class TGVN_Block(nn.Module):
     """
     Model block for trust-guided variational network.
     A series of these blocks can be stacked to form
     the full trust-guided variational network.
     """
 
-    def __init__(self, model: nn.Module, sdc_model: nn.Module):
+    def __init__(self, model: nn.Module, asc_model: nn.Module):
         """
         Args:
             model: Module for "regularization" component of TGVN.
-            sdc_model: Module for "trust guidance" component of TGVN
+            asc_model: Module for "trust guidance" component of TGVN
         """
         super().__init__()
 
         self.model = model
-        self.sdc_model = sdc_model
+        self.asc_model = asc_model
         self.dc_weight = nn.Parameter(torch.ones(1))
-        self.sdc_weight = nn.Parameter(torch.ones(1))
+        self.asc_weight = nn.Parameter(torch.ones(1))
         
     def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
         return fft2c(complex_mul(x, sens_maps))
@@ -349,14 +349,14 @@ class VarNetBlockImage_SDC(nn.Module):
         model_term = self.model(current_image)
 
         if sens_maps_second is not None: 
-            b = current_image - self.sdc_model(
+            b = current_image - self.asc_model(
                 self.sens_reduce(
                     second_kspace, 
                     sens_maps_second
                 )
             )
         else:
-            b = current_image - self.sdc_model(
+            b = current_image - self.asc_model(
                 self.sens_reduce(
                     second_kspace, 
                     sens_maps
@@ -393,8 +393,8 @@ class VarNetBlockImage_SDC(nn.Module):
             p = r + rs_new / rs_old * p
             rs_old = rs_new
         
-        soft_sdc = torch.abs(self.sdc_weight) * x
-        return current_image - soft_dc - soft_sdc - model_term
+        soft_asc = torch.abs(self.asc_weight) * x
+        return current_image - soft_dc - soft_asc - model_term
 
 class VarNetImage(nn.Module):
     """
@@ -466,7 +466,7 @@ class VarNetImage(nn.Module):
         else:
             return torch.view_as_complex(image_pred) 
 
-class VarNetImageSDC(nn.Module):
+class TGVN(nn.Module):
     """
     A full TGVN model.
     """
@@ -500,7 +500,7 @@ class VarNetImageSDC(nn.Module):
             mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
-            [VarNetBlockImage_SDC(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
+            [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
         
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
@@ -536,7 +536,7 @@ class VarNetImageSDC(nn.Module):
         else:
             return torch.view_as_complex(image_pred)      
 
-class VarNetImageSDC_2S(nn.Module):
+class TGVN_2S(nn.Module):
     """
     A full TGVN model with 2 sensitivity map estimations.
     """
@@ -570,7 +570,7 @@ class VarNetImageSDC_2S(nn.Module):
             mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
-            [VarNetBlockImage_SDC(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
+            [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
         )            
         
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
