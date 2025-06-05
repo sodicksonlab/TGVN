@@ -5,16 +5,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import fastmri
 from fastmri import complex_abs, complex_conj, ifft2c, fft2c, rss_complex
-from fastmri.data.transforms import center_crop, batched_mask_center
+from fastmri.data.transforms import batched_mask_center
 from fastmri.models.unet import Unet
+
 
 def sens_expand(x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
     return fft2c(complex_mul(x, sens_maps))
 
+
 def sens_reduce(k: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-    return complex_mul(ifft2c(k), complex_conj(sens_maps)).sum(dim=1, keepdim=True)
+    return complex_mul(
+        ifft2c(k), complex_conj(sens_maps)
+    ).sum(dim=1, keepdim=True)
+
 
 def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
@@ -32,20 +36,21 @@ def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     if not x.shape[-1] == y.shape[-1] == 2:
         raise ValueError("Tensors do not have separate complex dim.")
-    
+
     x_re, x_im = x[..., 0].clone(), x[..., 1].clone()
     y_re, y_im = y[..., 0].clone(), y[..., 1].clone()
 
     re = x_re * y_re - x_im * y_im
     im = x_re * y_im + x_im * y_re
     return torch.stack((re, im), dim=-1)
-    
+
+
 def inner(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Args:
         a, b are B x 1 x H x W x 2 tensors
-        where the last dimension represents 
-        the real and imaginary parts 
+        where the last dimension represents
+        the real and imaginary parts
     """
     B, C, H, W, two = a.shape
     assert (two == 2) and (a.shape == b.shape)
@@ -56,7 +61,8 @@ def inner(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     out = re_a * re_b + im_a * im_b
     out = out.sum(dim=2, keepdim=True).unsqueeze(2)
     return out
-    
+
+
 class NormUnet(nn.Module):
     """
     Normalized U-Net model.
@@ -102,15 +108,17 @@ class NormUnet(nn.Module):
         assert c2 % 2 == 0
         c = c2 // 2
         return x.view(b, 2, c, h, w).permute(0, 2, 3, 4, 1).contiguous()
-    
-    # Normalize the data as if it was complex valued, modified from fastMRI repo     
-    def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        # Apply Cholesky whitening 
+
+    # Normalize the x as if it was complex valued, modified from fastMRI repo
+    def norm(
+        self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # Apply Cholesky whitening
         b, c, h, w = x.shape
         x = x.contiguous().view(b, 2, c // 2 * h * w)
-        
+
         mean = torch.mean(x, dim=2, keepdim=True)
-        x = x - mean # x is now 0 mean 
+        x = x - mean  # x is now 0 mean
         xT = x.permute(0, 2, 1)
         cov = torch.bmm(x, xT) / (c // 2 * h * w - 1)
         L = torch.linalg.cholesky(cov)
@@ -118,7 +126,7 @@ class NormUnet(nn.Module):
         x = torch.bmm(W, x).contiguous().view(b, c, h, w)
         return x, mean, L
 
-    # Unnormalize the data as if it was complex valued, modified from fastMRI repo
+    # Unnormalize x as if it was complex valued, modified from fastMRI repo
     def unnorm(self, x, mean, L):
         b, c, h, w = x.shape
         x = x.contiguous().view(b, 2, c // 2 * h * w)
@@ -149,7 +157,7 @@ class NormUnet(nn.Module):
         h_mult: int,
         w_mult: int,
     ) -> torch.Tensor:
-        return x[..., h_pad[0] : h_mult - h_pad[1], w_pad[0] : w_mult - w_pad[1]]
+        return x[..., h_pad[0]: h_mult - h_pad[1], w_pad[0]: w_mult - w_pad[1]]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not x.shape[-1] == 2:
@@ -167,6 +175,7 @@ class NormUnet(nn.Module):
         x = self.unnorm(x, mean, L)
         x = self.chan_complex_to_last_dim(x)
         return x
+
 
 class SensitivityModel(nn.Module):
     """
@@ -211,17 +220,18 @@ class SensitivityModel(nn.Module):
 
         return x.view(b * c, 1, h, w, comp), b
 
-    def batch_chans_to_chan_dim(self, x: torch.Tensor, batch_size: int) -> torch.Tensor:
+    def batch_chans_to_chan_dim(
+        self, x: torch.Tensor, batch_size: int
+    ) -> torch.Tensor:
         bc, _, h, w, comp = x.shape
         c = bc // batch_size
-
         return x.view(batch_size, c, h, w, comp)
 
     def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
         return x / rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def get_pad_and_num_low_freqs(
-        self, mask: torch.Tensor, num_low_frequencies: Optional[int]=None
+        self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         if num_low_frequencies is None or num_low_frequencies == 0:
             # get low frequency line locations and mask them out
@@ -239,7 +249,10 @@ class SensitivityModel(nn.Module):
             )
 
         pad = (mask.shape[-2] - num_low_frequencies_tensor + 1) // 2
-        return pad.type(torch.long), num_low_frequencies_tensor.type(torch.long)
+        return (
+            pad.type(torch.long),
+            num_low_frequencies_tensor.type(torch.long),
+        )
 
     def forward(
         self,
@@ -262,7 +275,8 @@ class SensitivityModel(nn.Module):
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
         )
-           
+
+
 class VarNetBlockImage(nn.Module):
     """
     Model block for end-to-end variational network.
@@ -278,7 +292,7 @@ class VarNetBlockImage(nn.Module):
 
         self.model = model
         self.dc_weight = nn.Parameter(torch.ones(1))
-        
+
     def forward(
         self,
         current_image: torch.Tensor,
@@ -286,14 +300,15 @@ class VarNetBlockImage(nn.Module):
         mask: torch.Tensor,
         sens_maps: torch.Tensor,
     ) -> torch.Tensor:
-        
-        current_kspace = sens_expand(current_image, sens_maps) 
+
+        current_kspace = sens_expand(current_image, sens_maps)
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
         soft_dc = torch.where(mask, current_kspace - ref_kspace, zero)
         soft_dc *= torch.abs(self.dc_weight)
         soft_dc = sens_reduce(soft_dc, sens_maps)
         model_term = self.model(current_image)
-        return current_image - soft_dc  - model_term
+        return current_image - soft_dc - model_term
+
 
 class TGVN_Block(nn.Module):
     """
@@ -314,43 +329,43 @@ class TGVN_Block(nn.Module):
         self.asc_model = asc_model
         self.dc_weight = nn.Parameter(torch.ones(1))
         self.asc_weight = nn.Parameter(torch.ones(1))
-        
+
     def forward(
         self,
         current_image: torch.Tensor,
         ref_kspace: torch.Tensor,
         mask: torch.Tensor,
-        second_kspace: torch.Tensor, 
+        second_kspace: torch.Tensor,
         sens_maps: torch.Tensor,
-        delta: torch.Tensor, 
+        delta: torch.Tensor,
         sens_maps_second: torch.Tensor = None,
         num_iter: int = 10,
     ) -> torch.Tensor:
-        
-        current_kspace = sens_expand(current_image, sens_maps) 
+
+        current_kspace = sens_expand(current_image, sens_maps)
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
         soft_dc = torch.where(mask, current_kspace - ref_kspace, zero)
         soft_dc *= torch.abs(self.dc_weight)
         soft_dc = sens_reduce(soft_dc, sens_maps)
         model_term = self.model(current_image)
 
-        if sens_maps_second is not None: 
+        if sens_maps_second is not None:
             b = current_image - self.asc_model(
                 sens_reduce(
-                    second_kspace, 
+                    second_kspace,
                     sens_maps_second
                 )
             )
         else:
             b = current_image - self.asc_model(
                 sens_reduce(
-                    second_kspace, 
+                    second_kspace,
                     sens_maps
                 )
-            )      
-            
+            )
+
         # Conjugate gradient to solve Cx=b
-        # where b is given above 
+        # where b is given above
         mask_delta = 1 + mask / delta ** 2
         mask_delta_inv = 1 / mask_delta
         x = sens_reduce(
@@ -365,7 +380,7 @@ class TGVN_Block(nn.Module):
         )
         p = r.clone()
         rs_old = inner(r, r)
-    
+
         for _ in range(num_iter):
             Ap = sens_reduce(
                 mask_delta * sens_expand(
@@ -374,13 +389,14 @@ class TGVN_Block(nn.Module):
             )
             alpha = rs_old / inner(p, Ap)
             x += alpha * p
-            r -= alpha * Ap 
+            r -= alpha * Ap
             rs_new = inner(r, r)
             p = r + rs_new / rs_old * p
             rs_old = rs_new
-        
+
         soft_asc = torch.abs(self.asc_weight) * x
         return current_image - soft_dc - soft_asc - model_term
+
 
 class VarNetImage(nn.Module):
     """
@@ -418,9 +434,13 @@ class VarNetImage(nn.Module):
             num_pools=sens_pools,
             mask_center=mask_center,
         )
-                
+
         self.cascades = nn.ModuleList(
-            [VarNetBlockImage(NormUnet(chans, pools)) for _ in range(num_cascades)]
+            [
+                VarNetBlockImage(
+                    NormUnet(chans, pools)
+                ) for _ in range(num_cascades)
+            ]
         )
 
     def forward(
@@ -436,16 +456,17 @@ class VarNetImage(nn.Module):
 
         for cascade in self.cascades:
             image_pred = cascade(
-                image_pred, 
-                masked_kspace, 
-                mask, 
+                image_pred,
+                masked_kspace,
+                mask,
                 sens_maps
             )
         # return rss image or complex multi-coil images
         if return_mag:
             return complex_abs(image_pred)
         else:
-            return torch.view_as_complex(image_pred) 
+            return torch.view_as_complex(image_pred)
+
 
 class TGVN_1S(nn.Module):
     """
@@ -481,14 +502,18 @@ class TGVN_1S(nn.Module):
             mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
-            [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
+            [
+                TGVN_Block(
+                    NormUnet(chans, pools), NormUnet(chans, pools)
+                ) for _ in range(num_cascades)
+            ]
         )
-        
+
     def forward(
         self,
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
-        second_kspace: torch.Tensor, 
+        second_kspace: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
         return_mag: bool = True,
     ) -> torch.Tensor:
@@ -498,19 +523,20 @@ class TGVN_1S(nn.Module):
 
         for cascade in self.cascades:
             image_pred = cascade(
-                image_pred, 
-                masked_kspace, 
-                mask, 
-                second_kspace, 
-                sens_maps, 
-                self.delta, 
+                image_pred,
+                masked_kspace,
+                mask,
+                second_kspace,
+                sens_maps,
+                self.delta,
             )
-        
+
         # return rss image or complex multi-coil images
         if return_mag:
             return complex_abs(image_pred)
         else:
-            return torch.view_as_complex(image_pred)      
+            return torch.view_as_complex(image_pred)
+
 
 class TGVN_2S(nn.Module):
     """
@@ -546,33 +572,39 @@ class TGVN_2S(nn.Module):
             mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
-            [TGVN_Block(NormUnet(chans, pools), NormUnet(chans, pools)) for _ in range(num_cascades)]
-        )            
-        
+            [
+                TGVN_Block(
+                    NormUnet(chans, pools), NormUnet(chans, pools)
+                ) for _ in range(num_cascades)
+            ]
+        )
+
     def forward(
         self,
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
-        second_kspace: torch.Tensor, 
+        second_kspace: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
         return_mag: bool = True,
     ) -> torch.Tensor:
 
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
-        sens_maps_second = self.sens_net(second_kspace, mask, num_low_frequencies)
+        sens_maps_second = self.sens_net(
+            second_kspace, mask, num_low_frequencies
+        )
         image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
             image_pred = cascade(
-                image_pred, 
-                masked_kspace, 
-                mask, 
-                second_kspace, 
-                sens_maps, 
-                self.delta, 
+                image_pred,
+                masked_kspace,
+                mask,
+                second_kspace,
+                sens_maps,
+                self.delta,
                 sens_maps_second,
             )
-        
+
         # return rss image or complex multi-coil images
         if return_mag:
             return complex_abs(image_pred)

@@ -1,0 +1,8 @@
+{   
+    "python.defaultInterpreterPath": "C:\\Users\\t-aatalik\\AppData\\Local\\anaconda3\\python.exe",
+    "python.terminal.activateEnvironment": false,
+    "python.terminal.activateEnvInCurrentTerminal": false,
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.flake8Enabled": true
+}
