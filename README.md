@@ -11,8 +11,8 @@ In the brain experiments, the overall acceleration factors differ from the under
 ## File Descriptions
 
 ### Data and Splits
-- **`fastmri_split`**: Contains the data split for the fastMRI knee dataset. Note that the fastMRI training and validation sets were combined and the training/validation/test splits for our experiments were created on a per-patient basis. The CSV files contain filenames, so the user should modify them depending on the dataset location.
-- **`m4raw_split`**: Contains the data split for the M4Raw dataset. Note that the CSV files contain split and filenames, so the user should modify them depending on the dataset location.
+- **`data_splits/fastmri/`**: Contains the training, validation and test splits for the fastMRI knee dataset. Note that the fastMRI training and validation sets were combined and the training/validation/test splits for our experiments were created on a per-patient basis. The CSV files contain filenames, so the user should modify them depending on the dataset location.
+- **`data_splits/m4raw/`**: Contains the training, validation and test splits for the M4Raw dataset. Note that the CSV files contain split and filenames, so the user should modify them depending on the dataset location.
 
 ### SLURM Batch Scripts
 - **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN / E2E-VarNet.
