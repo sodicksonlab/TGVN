@@ -1,5 +1,5 @@
 # ---------- base image ----------
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # ---------- system packages ----------
 RUN export DEBIAN_FRONTEND=noninteractive \
