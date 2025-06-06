@@ -27,5 +27,6 @@ RUN pip install --upgrade pip \
         runstats \
         fastmri \
         argparse \
+        requests \
         flake8 \
         pylint
