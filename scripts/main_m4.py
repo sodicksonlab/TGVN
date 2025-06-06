@@ -41,7 +41,6 @@ def get_arguments():
     parser.add_argument("--ckpt-loc", type=str, default='none')
     parser.add_argument("--type", type=str, default='e2e')
     parser.add_argument("--main-contrast", type=str, default='flair')
-
     return parser
 
 
