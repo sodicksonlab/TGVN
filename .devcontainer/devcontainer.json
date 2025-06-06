@@ -4,6 +4,9 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
+    "containerEnv": {
+        "PYTHONPATH": "/workspaces/TGVN/src"
+    },
     "features": {},
     "customizations": {
         "vscode": {

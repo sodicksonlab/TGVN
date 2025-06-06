@@ -6,9 +6,9 @@ from distributed import init_distributed_mode
 from torch import optim, nn
 from fastmri.data.subsample import EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
-from data import VarNetDataTransformM4Joint, SliceDatasetM4Joint
-from models import VarNetImage, TGVN_2S
-from custom_losses import MS_SSIM_L1Loss
+from tgvn.data import VarNetDataTransformM4Joint, SliceDatasetM4Joint
+from tgvn.models import VarNetImage, TGVN_2S
+from tgvn.loss import MS_SSIM_L1Loss
 from fastmri import SSIMLoss
 
 
