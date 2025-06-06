@@ -12,7 +12,7 @@ In the brain experiments, the overall acceleration factors differ from the under
 
 ### Data and Splits
 * The fastMRI dataset can be downloaded at https://fastmri.med.nyu.edu
-* The M4Raw dataset can be downloaded at https://zenodo.org/records/8056074
+* The M4Raw dataset (version 1.6) can be downloaded at https://zenodo.org/records/8056074
 
 The dataset splits are provided as CSV files under `data_splits`.
 - **`data_splits/fastmri`**: Contains the training, validation and test splits for the fastMRI knee dataset. Note that the fastMRI training and validation sets were combined and the training/validation/test splits for our experiments were created on a per-patient basis. The CSV files contain filenames, so the user should modify them depending on the dataset location.
