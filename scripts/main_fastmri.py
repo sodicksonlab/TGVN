@@ -2,13 +2,13 @@ import numpy as np
 import torch
 import argparse
 
-from distributed import init_distributed_mode
 from torch import optim, nn
 from fastmri.data.subsample import RandomMaskFunc, EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
 from tgvn.data import VarNetDataTransformJoint, SliceDatasetJoint
 from tgvn.models import VarNetImage, TGVN_1S
 from tgvn.loss import MS_SSIM_L1Loss
+from tgvn.distributed import init_distributed_mode
 from fastmri import SSIMLoss
 
 
