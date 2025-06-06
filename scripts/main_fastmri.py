@@ -31,7 +31,7 @@ def get_arguments():
         help='url used to set up distributed training'
     )
 
-    # VarNet params
+    # TGVN params
     parser.add_argument("--num-casc", type=int, default=12)
     parser.add_argument("--num-chans", type=int, default=18)
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     batch_size = torch.cuda.device_count()
     per_device_batch_size = 1  # collation can be a problem if > 1
 
-    train_path = './fastmri_split/train.csv'
+    train_path = '../data_splits/fastmri/train.csv'
     train_transform = VarNetDataTransformJoint(
         pd_mask_func=EquiSpacedMaskFunc(
             center_fractions=[args.center_freq_p], accelerations=[args.acc_p]
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         num_workers=batch_size,
     )
 
-    val_path = './fastmri_split/val.csv'
+    val_path = '../data_splits/fastmri/val.csv'
     val_transform = VarNetDataTransformJoint(
         pd_mask_func=EquiSpacedMaskFunc(
             center_fractions=[args.center_freq_p], accelerations=[args.acc_p]
@@ -201,7 +201,8 @@ if __name__ == "__main__":
             )
             # Modify the path as appropriate
             model_path = (
-                f'./model_{args.type}_{args.acc_s}x_{args.acc_p}x_{epoch}.pth'
+                f'../checkpoints/model_{args.type}_'
+                f'{args.acc_s}x_{args.acc_p}x_{epoch}.pth'
             )
             torch.save(state, model_path)
 
@@ -229,10 +230,10 @@ if __name__ == "__main__":
                 target, out = center_crop_to_smallest(
                     s_target.unsqueeze(1), out
                 )
-                s = 1 - ssim_loss(out, target, data_range=s_mx)
+                ssim_value = 1 - ssim_loss(out, target, data_range=s_mx)
                 loss_value = loss(out, target, data_range=s_mx.item())
                 val_loss += loss_value.item()
-                val_ssim += s.item()
+                val_ssim += ssim_value.item()
 
             val_loss /= len(val_loader)
             val_ssim /= len(val_loader)

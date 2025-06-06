@@ -1,6 +1,8 @@
 # Project Repository
 
-This repository contains code and scripts for training and validating TGVNs to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. As the repository was built on fastMRI, the requirements can be found on https://github.com/facebookresearch/fastMRI. While this codebase utilizes PyTorch, any wrapper can be integrated easily.
+This repository contains code and scripts for training and validating TGVNs to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at `https://github.com/facebookresearch/fastMRI`. While this codebase utilizes PyTorch, any wrapper can be integrated easily.
+
+For convenience, a devcontainer that supports CUDA acceleration was added. ROCm acceleration can be achieved by making minimal changes to the Dockerfile. The repo follows the standard layout, so the package can be installed with `pip install -e .` from the repo root. 
 
 The M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS images (averaged over the repetition dimension) as the ground truth, which required only minimal HDF5 file manipulation.
 For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images. The resulting file was saved as `file_T1.h5`.
@@ -9,8 +11,8 @@ In the brain experiments, the overall acceleration factors differ from the under
 ## File Descriptions
 
 ### Data and Splits
-- **`fastmri_split`**: Contains the data split for the fastMRI knee dataset. Note that the fastMRI training and validation sets were combined and the training/validation/test splits for our experiments were created on a per-patient basis. The csv files contain filenames, so the user should modify them depending on the dataset location.
-- **`m4raw_split`**: Contains the data split for the M4Raw dataset. Note that the csv files contain split and filenames, so the user should modify them depending on the dataset location.
+- **`fastmri_split`**: Contains the data split for the fastMRI knee dataset. Note that the fastMRI training and validation sets were combined and the training/validation/test splits for our experiments were created on a per-patient basis. The CSV files contain filenames, so the user should modify them depending on the dataset location.
+- **`m4raw_split`**: Contains the data split for the M4Raw dataset. Note that the CSV files contain split and filenames, so the user should modify them depending on the dataset location.
 
 ### SLURM Batch Scripts
 - **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN / E2E-VarNet.
@@ -20,15 +22,15 @@ In the brain experiments, the overall acceleration factors differ from the under
 - **`B2.sbatch`**: SLURM script for running the experiment B2 using TGVN / E2E-VarNet.
 
 ### Core Code Files
-- **`custom_losses.py`**: Implements the custom loss function for training models.
-- **`data.py`**: Contains data loading and preprocessing logic for fastMRI knee and M4Raw datasets.
-- **`distributed.py`**: Handles distributed training setup and utilities to allow multi-GPU, multi-node training.
-- **`main_fastmri.py`**: Main script for training and evaluating models on the fastMRI dataset.
-- **`main_m4.py`**: Main script for training and evaluating models on the M4Raw dataset.
-- **`models.py`**: Defines TGVN architecture used in the project.
+- **`scripts/main_fastmri.py`**: Main script for training and evaluating models on the fastMRI dataset.
+- **`scripts/main_m4.py`**: Main script for training and evaluating models on the M4Raw dataset.
+- **`src/tgvn/loss.py`**: Implements the MS-SSIM-L1 loss function for training models.
+- **`src/tgvn/data.py`**: Contains data loading and preprocessing logic for fastMRI knee and M4Raw datasets.
+- **`src/tgvn/distributed.py`**: Handles distributed training setup and utilities for multi-GPU, multi-node training.
+- **`src/tgvn/models.py`**: Defines the TGVN architecture used in the project.
 
 ### Running Experiments
-1. Update the SLURM batch scripts (`K1.sbatch`, `K2.sbatch`, `K3.sbatch`, `B1.sbatch`, `B2.sbatch`) with the appropriate parameters for your environment.
+1. Update the SLURM batch scripts (`K1.sbatch`, `K2.sbatch`, `K3.sbatch`, `B1.sbatch`, `B2.sbatch`) with the appropriate parameters for your environment. The names of the sbatch files correspond to the experiments in the article. For details, see Table 1.
 2. Submit jobs using:
    ```bash
    sbatch K1.sbatch

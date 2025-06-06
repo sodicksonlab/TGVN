@@ -28,7 +28,7 @@ def get_arguments():
         help='url used to set up distributed training'
     )
 
-    # VarNet params
+    # TGVN params
     parser.add_argument("--num-casc", type=int, default=10)
     parser.add_argument("--num-chans", type=int, default=21)
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     batch_size = torch.cuda.device_count()
     per_device_batch_size = 1  # collation can be a problem if > 1
 
-    train_path = './m4raw_split/train.csv'
+    train_path = '../data_splits/m4raw/train.csv'
     if args.main_contrast.lower() == 'flair':
         train_transform = VarNetDataTransformM4Joint(
             flair_mask_func=EquiSpacedMaskFunc(
@@ -76,6 +76,7 @@ if __name__ == "__main__":
             use_seed=False
         )
     else:
+        # In this case, T1w is the main information
         train_transform = VarNetDataTransformM4Joint(
             flair_mask_func=EquiSpacedMaskFunc(
                 center_fractions=[0], accelerations=[1]
@@ -105,7 +106,7 @@ if __name__ == "__main__":
         num_workers=batch_size,
     )
 
-    val_path = './m4raw_split/val.csv'
+    val_path = '../data_splits/m4raw/val.csv'
     if args.main_contrast.lower() == 'flair':
         val_transform = VarNetDataTransformM4Joint(
             flair_mask_func=EquiSpacedMaskFunc(
@@ -243,13 +244,12 @@ if __name__ == "__main__":
                 model=model.state_dict(),
                 optimizer=optimizer.state_dict(),
             )
-            torch.save(
-                state,
-                (
-                    f'./model_{args.type}_{args.acc}x_'
-                    f'{args.main_contrast}_{epoch}.pth'
-                )
+            # Modify the path as appropriate
+            model_path = (
+                f'../checkpoints/model_{args.type}_{args.acc}x_'
+                f'{args.main_contrast}_{epoch}.pth'
             )
+            torch.save(state, model_path)
 
         with torch.no_grad():
             model.eval()
@@ -283,16 +283,20 @@ if __name__ == "__main__":
                         flair_target.unsqueeze(1), out
                     )
                     loss_value = loss(out, target, data_range=flair_mx.item())
-                    s = 1 - ssim_loss(out, target, data_range=flair_mx)
+                    ssim_value = 1 - ssim_loss(
+                        out, target, data_range=flair_mx
+                    )
                 else:
                     target, out = center_crop_to_smallest(
                         t1_target.unsqueeze(1), out
                     )
                     loss_value = loss(out, target, data_range=t1_mx.item())
-                    s = 1 - ssim_loss(out, target, data_range=t1_mx)
+                    ssim_value = 1 - ssim_loss(
+                        out, target, data_range=t1_mx
+                    )
 
                 val_loss += loss_value.item()
-                val_ssim += s.item()
+                val_ssim += ssim_value.item()
 
             val_loss /= len(val_loader)
             val_ssim /= len(val_loader)
