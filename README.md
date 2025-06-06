@@ -1,13 +1,9 @@
-# Project Repository
+# Project Repository Overview
 
 This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes PyTorch, any wrapper can be integrated easily.
 
 For convenience, a devcontainer that supports CUDA acceleration was added. ROCm acceleration can be achieved by making minimal changes to the Dockerfile. The repo follows the standard layout, so the package can be installed with `pip install -e .` from the repo root. 
 
-The M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS images (averaged over the repetition dimension) as the ground truth, which required only minimal HDF5 file manipulation.
-For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images. The resulting file was saved as `file_T1.h5`.
-
-In the brain experiments, the overall acceleration factors differ from the undersampling factors due to repetition reduction. Specifically, for B1, $18\times$ undersampling combined with $2\times$ repetition reduction results in a $36\times$ practical acceleration. For B2, $15\times$ undersampling and $3\times$ repetition reduction yield a $45\times$ practical acceleration.
 ## File Descriptions
 
 ### Data and Splits
@@ -43,6 +39,12 @@ The dataset splits are provided as CSV files under `data_splits`.
    sbatch B1.sbatch
    sbatch B2.sbatch
    ```
+
+## P.S.
+The M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS images (averaged over the repetition dimension) as the ground truth, which required only minimal HDF5 file manipulation.
+For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images. The resulting file was saved as `file_T1.h5`.
+
+In the brain experiments, the overall acceleration factors differ from the undersampling factors due to repetition reduction. Specifically, for B1, $18\times$ undersampling combined with $2\times$ repetition reduction results in a $36\times$ practical acceleration. For B2, $15\times$ undersampling and $3\times$ repetition reduction yield a $45\times$ practical acceleration.
 
 ## Questions
 For any questions or issues, feel free to reach out or open an issue in this repository.
