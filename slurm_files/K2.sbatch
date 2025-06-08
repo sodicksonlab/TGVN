@@ -10,4 +10,4 @@
 #SBATCH --output=TGVN_14x_3x.out
 
 export OMP_NUM_THREADS=4
-torchrun --nproc_per_node=4 --nnodes=$SLURM_JOB_NUM_NODES ./main_fastmri.py --acc-p 3 --center-freq-p 0 --acc-s 14 --center-freq-s 0.03 --num-casc 14 --num-chans 21 --type tgvn
+torchrun --nproc_per_node=4 --nnodes=$SLURM_JOB_NUM_NODES ../scripts/main_fastmri.py --acc-p 3 --center-freq-p 0 --acc-s 14 --center-freq-s 0.03 --num-casc 14 --num-chans 21 --type tgvn
