@@ -10,4 +10,4 @@
 #SBATCH --output=TGVN_18x_1x.out
 
 export OMP_NUM_THREADS=4
-torchrun --nproc_per_node=4 --nnodes=$SLURM_JOB_NUM_NODES ./main_m4.py --acc 32 --center-freq 0.02 --num-casc 10 --num-chans 21 --type tgvn
+torchrun --nproc_per_node=4 --nnodes=$SLURM_JOB_NUM_NODES ../scripts/main_m4.py --acc 32 --center-freq 0.02 --num-casc 10 --num-chans 21 --type tgvn
