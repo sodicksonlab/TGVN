@@ -61,7 +61,6 @@ if __name__ == "__main__":
 
     print(args)
     gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    challenge = 'multicoil'
     batch_size = torch.cuda.device_count()
     per_device_batch_size = 1  # collation can be a problem if > 1
 
@@ -79,7 +78,6 @@ if __name__ == "__main__":
     train_dataset = SliceDatasetJoint(
         csv_path=train_path,
         transform=train_transform,
-        challenge=challenge
     )
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -105,7 +103,6 @@ if __name__ == "__main__":
     val_dataset = SliceDatasetJoint(
         csv_path=val_path,
         transform=val_transform,
-        challenge=challenge
     )
 
     val_sampler = torch.utils.data.distributed.DistributedSampler(
