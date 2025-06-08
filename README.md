@@ -1,6 +1,6 @@
 # Project Repository Overview
 
-This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes PyTorch, any wrapper can be integrated easily.
+This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes only PyTorch, any wrapper can be integrated easily.
 
 For convenience, a devcontainer that supports CUDA acceleration was added. ROCm acceleration can be achieved by making minimal changes to the Dockerfile. The repo follows the standard layout, so the package can be installed with `pip install -e .` from the repo root. 
 
