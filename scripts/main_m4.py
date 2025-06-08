@@ -245,6 +245,7 @@ if __name__ == "__main__":
                 f'../checkpoints/model_{args.type}_{args.acc}x_'
                 f'{args.main_contrast}_{epoch}.pth'
             )
+            # The next line can be deleted if the directory already exists
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(state, model_path)
 
