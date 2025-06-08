@@ -14,15 +14,12 @@ from fastmri import SSIMLoss
 
 def get_arguments():
     parser = argparse.ArgumentParser(
-        description="Side Information Experiments",
-        add_help=False
+        description="Side Information Experiments", add_help=False
     )
 
     # Distributed
     parser.add_argument(
-        '--world-size',
-        default=1,
-        type=int,
+        '--world-size', default=1, type=int,
         help='number of distributed processes'
     )
     parser.add_argument('--local_rank', default=-1, type=int)
