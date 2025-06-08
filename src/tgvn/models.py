@@ -460,7 +460,8 @@ class VarNetImage(nn.Module):
                 mask,
                 sens_maps
             )
-        # return rss image or complex multi-coil images
+
+        # return magnitude or complex-valued image
         if return_mag:
             return complex_abs(image_pred)
         else:
@@ -530,7 +531,7 @@ class TGVN_1S(nn.Module):
                 self.delta,
             )
 
-        # return rss image or complex multi-coil images
+        # return magnitude or complex-valued image
         if return_mag:
             return complex_abs(image_pred)
         else:
@@ -604,7 +605,7 @@ class TGVN_2S(nn.Module):
                 sens_maps_second,
             )
 
-        # return rss image or complex multi-coil images
+        # return magnitude or complex-valued image
         if return_mag:
             return complex_abs(image_pred)
         else:
