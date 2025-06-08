@@ -71,7 +71,8 @@ def init_distributed_mode(args):
         backend=args.dist_backend,
         init_method=args.dist_url,
         world_size=args.world_size,
-        rank=args.rank
+        rank=args.rank,
+        device_id=args.gpu
     )
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
