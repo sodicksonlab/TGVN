@@ -217,7 +217,6 @@ class SensitivityModel(nn.Module):
 
     def chans_to_batch_dim(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
         b, c, h, w, comp = x.shape
-
         return x.view(b * c, 1, h, w, comp), b
 
     def batch_chans_to_chan_dim(
