@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import argparse
-
+import os
 from torch import optim, nn
 from fastmri.data.subsample import RandomMaskFunc, EquiSpacedMaskFunc
 from fastmri.data.transforms import center_crop_to_smallest
@@ -201,6 +201,7 @@ if __name__ == "__main__":
                 f'../checkpoints/model_{args.type}_'
                 f'{args.acc_s}x_{args.acc_p}x_{epoch}.pth'
             )
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(state, model_path)
 
         with torch.no_grad():
