@@ -20,6 +20,7 @@ RUN pip install --upgrade pip \
  && pip install --no-cache-dir \
         numpy \
         h5py \
+        matplotlib \
         scikit-image \
         pandas \
         pyyaml \
