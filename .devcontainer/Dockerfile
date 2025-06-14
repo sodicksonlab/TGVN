@@ -28,5 +28,4 @@ RUN pip install --upgrade pip \
         runstats \
         fastmri \
         requests \
-        flake8 \
-        pylint
+        flake8
