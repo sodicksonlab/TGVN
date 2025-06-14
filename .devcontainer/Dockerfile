@@ -26,7 +26,6 @@ RUN pip install --upgrade pip \
         torchmetrics \
         runstats \
         fastmri \
-        argparse \
         requests \
         flake8 \
         pylint
