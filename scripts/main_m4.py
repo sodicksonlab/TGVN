@@ -55,7 +55,9 @@ if __name__ == "__main__":
     print('Distributed mode initialized!')
 
     print(args)
-    gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    gpu = torch.device(
+        f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu"
+    )
     batch_size = torch.cuda.device_count()
     per_device_batch_size = 1  # collation can be a problem if > 1
 
