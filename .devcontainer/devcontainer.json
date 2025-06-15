@@ -4,6 +4,9 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
+    "runArgs": [
+        "--gpus=all"
+    ],
     "containerEnv": {
         "PYTHONPATH": "/workspaces/TGVN/src"
     },
@@ -16,7 +19,7 @@
                 "ms-python.flake8"
             ],
             "settings": {
-                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.formatting.provider": "black",
                 "python.linting.flake8Enabled": true
             }
