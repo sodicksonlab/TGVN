@@ -10,7 +10,6 @@
     "containerEnv": {
         "PYTHONPATH": "/workspaces/TGVN/src"
     },
-    "features": {},
     "customizations": {
         "vscode": {
             "extensions": [
