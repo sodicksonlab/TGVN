@@ -21,9 +21,6 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 RUN pip3 install --no-cache-dir --upgrade pip \
         && rm -rf /root/.cache/pip \
         && pip3 install --no-cache-dir \
-        torch torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu128 \
-        && pip3 install --no-cache-dir \
         numpy \
         h5py \
         matplotlib \
@@ -35,4 +32,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
         fastmri \
         requests \
         flake8 \
-        black
+        black \
+        && pip3 install --no-cache-dir \
+        torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu128
