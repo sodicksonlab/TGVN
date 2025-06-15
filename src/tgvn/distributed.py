@@ -73,6 +73,6 @@ def init_distributed_mode(args):
         world_size=args.world_size,
         rank=args.rank
     )
-    torch.distributed.barrier()
+    torch.distributed.barrier(device_ids=[args.gpu])
     setup_for_distributed(args.rank == 0)
     print(f'Number of gpus: {args.world_size}')
