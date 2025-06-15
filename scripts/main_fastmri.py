@@ -185,9 +185,9 @@ if __name__ == "__main__":
             optimizer.step()
             train_loss += loss_value.item()
         train_loss /= len(train_loader)
-        print(f'train_loss at epoch {epoch} is {train_loss}')
 
         if args.rank == 0:
+            print(f'Train loss at epoch {epoch+1}: {train_loss}')
             state = dict(
                 epoch=epoch+1,
                 model=model.state_dict(),
@@ -233,8 +233,9 @@ if __name__ == "__main__":
 
             val_loss /= len(val_loader)
             val_ssim /= len(val_loader)
-        print(
-            f'val_loss at epoch {epoch} is {val_loss}, '
-            f'val_ssim is {val_ssim}'
-        )
+        if args.rank == 0:
+            print(
+                f'Validation loss at epoch {epoch+1}: {val_loss}, '
+                f'Validation SSIM: {val_ssim}'
+            )
         scheduler.step()
