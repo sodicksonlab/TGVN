@@ -7,6 +7,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         && apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
+        python-is-python3 \
         git \
         curl \
         ca-certificates \
