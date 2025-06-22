@@ -1,9 +1,4 @@
-# Trust-Guided Variational Networks (TGVN) [![MICCAI 2025](https://img.shields.io/badge/MICCAI-2025-blue)](#citation)
-
-> **News (June 17, 2025)**
-> 
-> Our paper **_“Harnessing Side Information for Highly Accelerated MRI”_** has been **accepted at *MICCAI 2025*** 🎉  
-> The camera-ready PDF will be posted here soon.
+# Trust-Guided Variational Networks (TGVN)
 
 ## Project Repository Overview
 
