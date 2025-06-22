@@ -10,6 +10,7 @@
     "containerEnv": {
         "PYTHONPATH": "/workspaces/TGVN/src"
     },
+    "postCreateCommand": "pip install -e .",
     "customizations": {
         "vscode": {
             "extensions": [
