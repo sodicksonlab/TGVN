@@ -1,4 +1,11 @@
-# Project Repository Overview
+# Trust-Guided Variational Networks (TGVN) [![MICCAI 2025](https://img.shields.io/badge/MICCAI-2025-blue)](#citation)
+
+> **News (June 2025)** Our paper  
+> “Harnessing Side Information for Highly Accelerated MRI”  
+> has been **accepted at *MICCAI 2025*** 🎉  
+> The camera-ready PDF will be posted here soon.
+
+## Project Repository Overview
 
 This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes only PyTorch, any wrapper can be integrated easily.
 
