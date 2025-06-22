@@ -1,7 +1,7 @@
 # Trust-Guided Variational Networks (TGVN) [![MICCAI 2025](https://img.shields.io/badge/MICCAI-2025-blue)](#citation)
 
-> **News (June 2025)** Our paper  
-> “Harnessing Side Information for Highly Accelerated MRI”  
+> **News (June 17, 2025)**
+> Our paper “Harnessing Side Information for Highly Accelerated MRI”  
 > has been **accepted at *MICCAI 2025*** 🎉  
 > The camera-ready PDF will be posted here soon.
 
@@ -48,8 +48,8 @@ For convenience, we provided the SLURM scripts for each experiment. If you prefe
    sbatch B2.sbatch
    ```
 
-## P.S.
-The M4Raw dataset contains multiple repetitions. We used the undersampled first repetition as input and the averaged RSS images (averaged over the repetition dimension) as the ground truth, which required only minimal HDF5 file manipulation.
+## Notes on M4Raw pre-processing
+The M4Raw dataset contains multiple repetitions, and repetition reduction provides another avenue for practical acceleration. We used the undersampled first repetition as input and the averaged RSS images (averaged over the repetition dimension) as the ground truth, which required only minimal HDF5 file manipulation.
 For example, if `file_T101.h5`, `file_T102.h5`, `file_T103.h5` contain data from three repetitions for a given patient, we retained the k-space from `file_T101.h5` and computed the ground truth by averaging the RSS images. The resulting file was saved as `file_T1.h5`.
 
 In the brain experiments, the overall acceleration factors differ from the undersampling factors due to repetition reduction. Specifically, for B1, $18\times$ undersampling combined with $2\times$ repetition reduction results in a $36\times$ practical acceleration. For B2, $15\times$ undersampling and $3\times$ repetition reduction yield a $45\times$ practical acceleration.
