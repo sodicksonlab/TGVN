@@ -26,7 +26,7 @@ The dataset splits are provided as CSV files under `data_splits`.
 - **`scripts/main_m4.py`**: Main script for training and evaluating models on the M4Raw dataset.
 - **`src/tgvn/loss.py`**: Implements the MS-SSIM-L1 loss function for training models.
 - **`src/tgvn/data.py`**: Contains data loading and preprocessing logic for fastMRI knee and M4Raw datasets.
-- **`src/tgvn/distributed.py`**: Handles distributed training setup and utilities for multi-GPU, multi-node training.
+- **`src/tgvn/distributed.py`**: Handles distributed training setup and utilities for multi-GPU training.
 - **`src/tgvn/models.py`**: Defines the TGVN architecture used in the project.
 
 ### Running Experiments
