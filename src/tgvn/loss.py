@@ -1,3 +1,8 @@
+"""
+MS_SSIM_L1Loss implementation borrowed from
+github.com/psyrocloud/MS-SSIM_L1_LOSS
+"""
+
 import torch
 from torch import nn
 from torch.nn.functional import l1_loss, conv2d
