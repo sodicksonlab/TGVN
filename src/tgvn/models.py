@@ -1,3 +1,7 @@
+"""
+Copyright (c) 2025 New York University
+"""
+
 import math
 from typing import List, Optional, Tuple
 
@@ -6,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from fastmri import complex_abs, complex_conj, ifft2c, fft2c, rss_complex
-from fastmri.data.transforms import batched_mask_center
 from fastmri.models.unet import Unet
 
 
@@ -65,11 +68,11 @@ def inner(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 class NormUnet(nn.Module):
     """
-    Normalized U-Net model.
+    Adapted from the fastMRI implementation.
+    fastMRI is copyright-protected by Facebook, Inc. and its affiliates.
 
-    This is the same as a regular U-Net, but with normalization applied to the
-    input before the U-Net. This keeps the values more numerically stable
-    during training.
+    Same as a regular U-Net, but with normalization applied to the input
+    before the U-Net. This keeps the values more numerically stable.
     """
 
     def __init__(
@@ -142,10 +145,6 @@ class NormUnet(nn.Module):
         h_mult = ((h - 1) | 15) + 1
         w_pad = [math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2)]
         h_pad = [math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2)]
-        # TODO: fix this type when PyTorch fixes theirs
-        # the documentation lies - this actually takes a list
-        # https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py#L3457
-        # https://github.com/pytorch/pytorch/pull/16949
         x = F.pad(x, w_pad + h_pad)
         return x, (h_pad, w_pad, h_mult, w_mult)
 
@@ -157,7 +156,7 @@ class NormUnet(nn.Module):
         h_mult: int,
         w_mult: int,
     ) -> torch.Tensor:
-        return x[..., h_pad[0]: h_mult - h_pad[1], w_pad[0]: w_mult - w_pad[1]]
+        return x[..., h_pad[0]:h_mult - h_pad[1], w_pad[0]:w_mult - w_pad[1]]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not x.shape[-1] == 2:
@@ -179,11 +178,12 @@ class NormUnet(nn.Module):
 
 class SensitivityModel(nn.Module):
     """
-    Model for learning sensitivity estimation from k-space data.
+    Adapted from the fastMRI implementation.
+    fastMRI is copyright-protected by Facebook, Inc. and its affiliates.
 
+    Model for learning sensitivity estimation from k-space data.
     This model applies an IFFT to multichannel k-space data and then a U-Net
-    to the coil images to estimate coil sensitivities. It can be used with the
-    end-to-end variational network.
+    to the coil images to estimate coil sensitivities.
     """
 
     def __init__(
@@ -193,7 +193,6 @@ class SensitivityModel(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
-        mask_center: bool = False,
     ):
         """
         Args:
@@ -202,11 +201,8 @@ class SensitivityModel(nn.Module):
             in_chans: Number of channels in the input to the U-Net model.
             out_chans: Number of channels in the output to the U-Net model.
             drop_prob: Dropout probability.
-            mask_center: Whether to mask center of k-space for sensitivity map
-                calculation.
         """
         super().__init__()
-        self.mask_center = mask_center
         self.norm_unet = NormUnet(
             chans,
             num_pools,
@@ -229,44 +225,10 @@ class SensitivityModel(nn.Module):
     def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
         return x / rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
-    def get_pad_and_num_low_freqs(
-        self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if num_low_frequencies is None or num_low_frequencies == 0:
-            # get low frequency line locations and mask them out
-            squeezed_mask = mask[:, 0, 0, :, 0].to(torch.int8)
-            cent = squeezed_mask.shape[1] // 2
-            # running argmin returns the first non-zero
-            left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
-            right = torch.argmin(squeezed_mask[:, cent:], dim=1)
-            num_low_frequencies_tensor = torch.max(
-                2 * torch.min(left, right), torch.ones_like(left)
-            )  # force a symmetric center unless 1
-        else:
-            num_low_frequencies_tensor = num_low_frequencies * torch.ones(
-                mask.shape[0], dtype=mask.dtype, device=mask.device
-            )
-
-        pad = (mask.shape[-2] - num_low_frequencies_tensor + 1) // 2
-        return (
-            pad.type(torch.long),
-            num_low_frequencies_tensor.type(torch.long),
-        )
-
     def forward(
         self,
         masked_kspace: torch.Tensor,
-        mask: torch.Tensor,
-        num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        if self.mask_center:
-            pad, num_low_freqs = self.get_pad_and_num_low_freqs(
-                mask, num_low_frequencies
-            )
-            masked_kspace = batched_mask_center(
-                masked_kspace, pad, pad + num_low_freqs
-            )
-
         # convert to image space
         images, batches = self.chans_to_batch_dim(ifft2c(masked_kspace))
 
@@ -278,6 +240,9 @@ class SensitivityModel(nn.Module):
 
 class VarNetBlockImage(nn.Module):
     """
+    Adapted from the fastMRI implementation.
+    fastMRI is copyright-protected by Facebook, Inc. and its affiliates.
+
     Model block for end-to-end variational network.
     """
 
@@ -399,8 +364,10 @@ class TGVN_Block(nn.Module):
 
 class VarNetImage(nn.Module):
     """
-    A full E2E-VarNet model implemented in image domain.
+    Adapted from the fastMRI implementation.
+    fastMRI is copyright-protected by Facebook, Inc. and its affiliates.
 
+    A full E2E-VarNet model implemented in image domain.
     This model applies a combination of soft data consistency with a U-Net
     regularizer. To use non-U-Net regularizers, use VarNetBlock.
     """
@@ -412,7 +379,6 @@ class VarNetImage(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
-        mask_center: bool = False,
     ):
         """
         Args:
@@ -424,14 +390,11 @@ class VarNetImage(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            mask_center: Whether to mask center of k-space for sensitivity map
-                calculation.
         """
         super().__init__()
         self.sens_net = SensitivityModel(
             chans=sens_chans,
             num_pools=sens_pools,
-            mask_center=mask_center,
         )
 
         self.cascades = nn.ModuleList(
@@ -446,11 +409,10 @@ class VarNetImage(nn.Module):
         self,
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
-        num_low_frequencies: Optional[int] = None,
         return_mag: bool = True,
     ) -> torch.Tensor:
 
-        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
+        sens_maps = self.sens_net(masked_kspace)
         image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
@@ -480,7 +442,6 @@ class TGVN_1S(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
-        mask_center: bool = False,
     ):
         """
         Args:
@@ -491,15 +452,12 @@ class TGVN_1S(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            mask_center: Whether to mask center of k-space for sensitivity map
-                calculation.
         """
         super().__init__()
         self.delta = nn.Parameter(0.1 * torch.ones(1))
         self.sens_net = SensitivityModel(
             chans=sens_chans,
             num_pools=sens_pools,
-            mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
             [
@@ -514,11 +472,10 @@ class TGVN_1S(nn.Module):
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
         second_kspace: torch.Tensor,
-        num_low_frequencies: Optional[int] = None,
         return_mag: bool = True,
     ) -> torch.Tensor:
 
-        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
+        sens_maps = self.sens_net(masked_kspace)
         image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
@@ -550,7 +507,6 @@ class TGVN_2S(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
-        mask_center: bool = False,
     ):
         """
         Args:
@@ -561,15 +517,12 @@ class TGVN_2S(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            mask_center: Whether to mask center of k-space for sensitivity map
-                calculation.
         """
         super().__init__()
         self.delta = nn.Parameter(0.1 * torch.ones(1))
         self.sens_net = SensitivityModel(
             chans=sens_chans,
             num_pools=sens_pools,
-            mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
             [
@@ -584,14 +537,11 @@ class TGVN_2S(nn.Module):
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
         second_kspace: torch.Tensor,
-        num_low_frequencies: Optional[int] = None,
         return_mag: bool = True,
     ) -> torch.Tensor:
 
-        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
-        sens_maps_second = self.sens_net(
-            second_kspace, mask, num_low_frequencies
-        )
+        sens_maps = self.sens_net(masked_kspace)
+        sens_maps_second = self.sens_net(second_kspace)
         image_pred = sens_reduce(masked_kspace, sens_maps)
 
         for cascade in self.cascades:
