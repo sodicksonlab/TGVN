@@ -1,5 +1,5 @@
 """
-TGVN – MR image reconstruction utilities.
+TGVN – Leveraging side information in MR image reconstruction.
 
 Exposes high-level API surfaces so client code can simply write::
 
