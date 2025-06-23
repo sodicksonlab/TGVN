@@ -1,3 +1,9 @@
+"""
+Data module to train, validate and test TGVN
+This module was built upon the fastMRI data module.
+fastMRI is copyright-protected by Facebook, Inc. and its affiliates.
+"""
+
 import xml.etree.ElementTree as etree
 import pandas as pd
 import numpy as np
