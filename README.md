@@ -4,6 +4,8 @@
 > 
 >  (June 17, 2025) Our paper **_“Harnessing Side Information for Highly Accelerated MRI”_** has been **accepted at *MICCAI 2025*** 🎉  
 > The camera-ready PDF will be posted here soon.
+> 
+> (May 5, 2025) A patent application has been filed covering the work described in this publication.
 
 ## Project Repository Overview
 
