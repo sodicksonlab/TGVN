@@ -1,5 +1,5 @@
 """
-Copyright (c) 2025 New York University
+Copyright (c) 2025, New York University
 """
 
 import math
