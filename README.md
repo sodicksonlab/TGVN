@@ -26,12 +26,12 @@ The dataset splits are provided as CSV files under `data_splits`.
 - **`data_splits/m4raw`**: Contains the training, validation and test splits for the M4Raw dataset. Note that the CSV files contain split and filenames, so the user should modify them depending on the dataset location.
 
 ### SLURM Batch Scripts
-For convenience, we provided the SLURM scripts for each experiment. If you prefer not to use SLURM, you can directly use torchrun from the repo root, e.g., for B1, `torchrun --nproc_per_node=4 --nnodes=1 scripts/main_m4.py --acc 32 --center-freq 0.02 --num-casc 10 --num-chans 21 --type tgvn`.
-- **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN / E2E-VarNet.
-- **`K2.sbatch`**: SLURM script for running the experiment K2 using TGVN / E2E-VarNet.
-- **`K3.sbatch`**: SLURM script for running the experiment K3 using TGVN / E2E-VarNet.
-- **`B1.sbatch`**: SLURM script for running the experiment B1 using TGVN / E2E-VarNet.
-- **`B2.sbatch`**: SLURM script for running the experiment B2 using TGVN / E2E-VarNet.
+For convenience, we provided the SLURM scripts for each experiment. If you prefer not to use SLURM, you can directly use torchrun from the repo root, e.g., for B1, `torchrun --nproc_per_node=4 --nnodes=1 scripts/main_m4.py --acc 32 --center-freq 0.02 --num-casc 10 --num-chans 21 --type tgvn`. The arguments specified in the sbatch files are exactly those used in the experiments.
+- **`K1.sbatch`**: SLURM script for running the experiment K1 using TGVN.
+- **`K2.sbatch`**: SLURM script for running the experiment K2 using TGVN.
+- **`K3.sbatch`**: SLURM script for running the experiment K3 using TGVN.
+- **`B1.sbatch`**: SLURM script for running the experiment B1 using TGVN.
+- **`B2.sbatch`**: SLURM script for running the experiment B2 using TGVN.
 
 ### Core Code Files
 - **`scripts/main_fastmri.py`**: Main script for training and evaluating models on the fastMRI dataset.
