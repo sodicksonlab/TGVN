@@ -18,7 +18,7 @@ For convenience, a devcontainer that supports CUDA acceleration (CUDA 12.8) was 
 ## File Descriptions
 
 ### Data and Splits
-* The fastMRI dataset can be downloaded at https://fastmri.med.nyu.edu
+* The fastMRI knee dataset can be downloaded at https://fastmri.med.nyu.edu
 * The M4Raw dataset (version 1.6) can be downloaded at https://zenodo.org/records/8056074
 
 The dataset splits are provided as CSV files under `data_splits`.
