@@ -1,5 +1,6 @@
 """
 TGVN – Leveraging side information in MR image reconstruction.
+Copyright (c) 2025, New York University
 
 Exposes high-level API surfaces so client code can simply write::
 
