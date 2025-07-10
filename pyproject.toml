@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tgvn"
+version = "0.0.1"
+description = "MR image reconstruction with side information"
+requires-python = ">=3.9"
+
+# pick up everything under src/
+[tool.setuptools.packages.find]
+where = ["src"]
