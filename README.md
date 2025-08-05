@@ -1,16 +1,15 @@
-# Trust-Guided Variational Networks (TGVN) [![MICCAI 2025](https://img.shields.io/badge/MICCAI-2025-blue)](#citation)
+# Trust-Guided Variational Networks (TGVN) [![IEEE T-MI](https://img.shields.io/badge/IEEE-T--MI-blue)](#citation) [![MICCAI 2025](https://img.shields.io/badge/MICCAI-2025-red)](#citation) 
 
 © 2025 New York University
 
 > **News**
-> 
->  - (June 17, 2025) Our paper **_“Harnessing Side Information for Highly Accelerated MRI”_** has been **accepted at *MICCAI 2025*** 🎉  
-> 
+> - (July 31, 2025) Our paper **_“A Trust-Guided Approach to MR Image Reconstruction with Side Information”_** has been **published in *IEEE Transactions on Medical Imaging*** 🎉  
+> - (June 17, 2025) Our paper **_“Harnessing Side Information for Highly Accelerated MRI”_** has been **accepted at *MICCAI 2025*** 🎉  
 > - (May 5, 2025) A patent application has been filed covering the work described in this publication.
 
 ## Project Repository Overview
 
-This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate https://arxiv.org/abs/2501.03021. Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes only PyTorch, any wrapper can be integrated easily.
+This repository contains code and scripts for training and validating **T**rust **G**uided **V**ariational **N**etworks (**TGVN**) to replicate the experiments presented in [our IEEE T-MI article](https://ieeexplore.ieee.org/document/11105520). Below is an overview of the files and their purposes. The repo was built on the fastMRI repo, which is accessible at https://github.com/facebookresearch/fastMRI. While this codebase utilizes only PyTorch, any wrapper can be integrated easily.
 
 For convenience, a devcontainer that supports CUDA acceleration (CUDA 12.8) was added. For other CUDA versions or ROCm, the Dockerfile can be modified. Before building the container, you might want to update the `devcontainer.json` to access the data inside the container. You can do so by uncommenting the `mounts` key and adding the data paths.
 
