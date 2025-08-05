@@ -61,3 +61,18 @@ In the brain experiments, the overall acceleration factors differ from the under
 
 ## Questions
 For any questions or issues, feel free to reach out or open an issue in this repository.
+
+## Citation
+If you use this codebase or find it helpful in your research, please cite:
+
+> A. Atalık, S. Chopra, and D. K. Sodickson,
+"A Trust-Guided Approach to MR Image Reconstruction with Side Information,"
+*IEEE Transactions on Medical Imaging*.
+> 
+> [![DOI:10.1109/TMI.2025.3594363](https://zenodo.org/badge/DOI/10.1109/TMI.2025.3594363.svg)](https://doi.org/10.1109/TMI.2025.3594363)
+
+   
+
+
+
+
