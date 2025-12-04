@@ -105,8 +105,8 @@ if __name__ == "__main__":
         num_workers=batch_size,
     )
 
-    val_path = '../data_splits/m4raw/val.csv'
     if args.main_contrast.lower() == 'flair':
+        val_path = '../data_splits/m4raw/val.csv'
         val_transform = VarNetDataTransformM4Joint(
             flair_mask_func=EquiSpacedMaskFunc(
                 center_fractions=[args.center_freq], accelerations=[args.acc]
@@ -120,6 +120,7 @@ if __name__ == "__main__":
             use_seed=True
         )
     else:
+        val_path = '../data_splits/m4raw/val_b2.csv'
         val_transform = VarNetDataTransformM4Joint(
             flair_mask_func=EquiSpacedMaskFunc(
                 center_fractions=[0], accelerations=[1]
